@@ -30,12 +30,27 @@ export default function App() {
       const adminParam = params.get('admin');
 
       // Check also hostname subdomains (e.g., navalha-ouro.meuapp.com)
-      const hostname = window.location.hostname;
+      const hostname = window.location.hostname.toLowerCase();
       let detectedSubdomain = tenantParam;
 
-      if (!detectedSubdomain && hostname && !hostname.includes('localhost') && !hostname.includes('run.app')) {
+      const isHostingDomain =
+        hostname.includes('localhost') ||
+        hostname.includes('127.0.0.1') ||
+        hostname.includes('run.app') ||
+        hostname.includes('netlify.app') ||
+        hostname.includes('vercel.app') ||
+        hostname.includes('web.app') ||
+        hostname.includes('firebaseapp.com') ||
+        hostname.includes('pages.dev') ||
+        hostname.includes('onrender.com') ||
+        hostname.includes('stackblitz.io') ||
+        hostname.includes('cloudworkstations.dev') ||
+        hostname.includes('google.com') ||
+        hostname.includes('github.io');
+
+      if (!detectedSubdomain && hostname && !isHostingDomain) {
         const parts = hostname.split('.');
-        if (parts.length > 2) {
+        if (parts.length > 2 && parts[0] !== 'www') {
           detectedSubdomain = parts[0];
         }
       }
