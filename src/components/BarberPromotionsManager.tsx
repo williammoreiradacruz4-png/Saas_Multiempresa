@@ -36,10 +36,13 @@ import {
 
 interface BarberPromotionsManagerProps {
   banners: BarberPromotionBanner[];
-  onSaveBanner: (banner: BarberPromotionBanner) => void;
-  onDeleteBanner: (bannerId: string) => void;
-  onToggleActive: (banner: BarberPromotionBanner) => void;
-  onResetToDefaultBanners?: () => void;
+  tenantSubdomain?: string;
+  themeColorHex?: string;
+  onSaveBanner: (banner: BarberPromotionBanner) => void | Promise<void>;
+  onDeleteBanner: (bannerId: string) => void | Promise<void>;
+  onToggleActive: (banner: BarberPromotionBanner) => void | Promise<void>;
+  onResetToDefaultBanners?: () => void | Promise<void>;
+  onResetDefaults?: () => void | Promise<void>;
 }
 
 export const BarberPromotionsManager: React.FC<BarberPromotionsManagerProps> = ({
