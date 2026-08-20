@@ -825,18 +825,32 @@ export async function saveBookingToFirestore(
       clientName: booking.clientName || clientDetails?.name || 'Cliente Online',
       clientPhone: booking.clientPhone || clientDetails?.phone || '(11) 98765-4321',
       clientEmail: booking.clientEmail || clientDetails?.email || '',
+      serviceName: booking.serviceName || 'Corte Tradicional',
+      servicePrice: typeof booking.servicePrice === 'number' ? booking.servicePrice : 50.0,
+      barberName: booking.barberName || 'Barbeiro',
+      date: booking.date || new Date().toISOString().split('T')[0],
+      formattedDate: booking.formattedDate || 'Hoje',
+      dateTime: booking.formattedDate || booking.date || 'Hoje',
+      time: booking.time || '14:00',
       origin: 'Painel Cliente',
+      status: booking.status || 'Agendado',
       createdAtServer: serverTimestamp(),
       updatedAt: new Date().toISOString(),
     };
 
     // 1. Salva no localStorage para sincronia instantânea na mesma aba/outras abas
     try {
-      const storageKey = `tenant_appointments_${cleanTenantId}`;
-      const existing = localStorage.getItem(storageKey);
-      let list: any[] = existing ? JSON.parse(existing) : [];
-      list = [payload, ...list.filter((item) => item.id !== bookingDocId)];
-      localStorage.setItem(storageKey, JSON.stringify(list));
+      const keysToSave = [
+        `tenant_appointments_${cleanTenantId}`,
+        'tenant_appointments_all',
+        'tenant_appointments_navalha-ouro',
+      ];
+      keysToSave.forEach((storageKey) => {
+        const existing = localStorage.getItem(storageKey);
+        let list: any[] = existing ? JSON.parse(existing) : [];
+        list = [payload, ...list.filter((item) => item.id !== bookingDocId)];
+        localStorage.setItem(storageKey, JSON.stringify(list));
+      });
 
       // Salva também no histórico individual do cliente
       if (payload.clientId) {
@@ -870,6 +884,12 @@ export async function saveBookingToFirestore(
       await setDoc(doc(db, `tenants/${cleanTenantId}/appointments`, bookingDocId), payload, {
         merge: true,
       });
+      // Se não for a padrão, grava também na navalha-ouro como backup de segurança
+      if (cleanTenantId !== 'navalha-ouro') {
+        await setDoc(doc(db, `tenants/navalha-ouro/appointments`, bookingDocId), payload, {
+          merge: true,
+        });
+      }
     } catch (e2) {
       console.warn(`Erro ao gravar em tenants/${cleanTenantId}/appointments:`, e2);
     }
@@ -885,15 +905,22 @@ export async function getAppointmentsFromFirestore(tenantId: string): Promise<an
   const cleanTenantId = tenantId || 'navalha-ouro';
   const listMap = new Map<string, any>();
 
-  // 1. Carrega do cache local primeiro
+  // 1. Carrega do cache local primeiro (múltiplas chaves para máxima segurança)
   try {
-    const cached = localStorage.getItem(`tenant_appointments_${cleanTenantId}`);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((item) => {
-          if (item && item.id) listMap.set(item.id, item);
-        });
+    const keysToCheck = [
+      `tenant_appointments_${cleanTenantId}`,
+      'tenant_appointments_all',
+      'tenant_appointments_navalha-ouro',
+    ];
+    for (const key of keysToCheck) {
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item) => {
+            if (item && item.id) listMap.set(item.id, item);
+          });
+        }
       }
     }
   } catch {}
@@ -909,20 +936,48 @@ export async function getAppointmentsFromFirestore(tenantId: string): Promise<an
     console.warn('Erro ao ler appointments do tenant:', error);
   }
 
-  // 3. Se ainda estiver vazio, busca na coleção raiz de appointments
+  // 3. Se cleanTenantId não for navalha-ouro, busca também na navalha-ouro para redundância
+  if (cleanTenantId !== 'navalha-ouro') {
+    try {
+      const fallbackSnap = await getDocs(collection(db, 'tenants/navalha-ouro/appointments'));
+      fallbackSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.tenantId === cleanTenantId || !data.tenantId) {
+          listMap.set(docSnap.id, { id: docSnap.id, ...data });
+        }
+      });
+    } catch {}
+  }
+
+  // 4. Busca na coleção raiz de appointments
   try {
     const globalSnap = await getDocs(collection(db, 'appointments'));
     globalSnap.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data.tenantId === cleanTenantId || !data.tenantId) {
-        listMap.set(docSnap.id, { id: docSnap.id, ...data });
-      }
+      listMap.set(docSnap.id, { id: docSnap.id, ...data });
     });
   } catch (error) {
     console.warn('Erro ao ler appointments globais:', error);
   }
 
-  const result = Array.from(listMap.values());
+  const result = Array.from(listMap.values()).map((a) => ({
+    id: String(a.id || `apt-${Date.now()}`),
+    clientName: String(a.clientName || a.name || 'Cliente Online'),
+    clientPhone: String(a.clientPhone || a.phone || ''),
+    serviceName: String(a.serviceName || 'Serviço'),
+    servicePrice: typeof a.servicePrice === 'number' ? a.servicePrice : (parseFloat(a.servicePrice) || 50.0),
+    barberName: String(a.barberName || 'Barbeiro'),
+    dateTime: String(a.formattedDate || a.dateTime || a.date || 'Hoje'),
+    date: String(a.date || a.dateTime || ''),
+    formattedDate: String(a.formattedDate || a.dateTime || 'Hoje'),
+    time: String(a.time || '14:00'),
+    origin: (a.origin as any) || 'Painel Cliente',
+    status: (a.status as any) || 'Agendado',
+    createdAt: a.createdAt || new Date().toISOString(),
+    clientId: a.clientId || undefined,
+    clientEmail: a.clientEmail || '',
+  }));
+
   // Ordena por data/hora mais recente
   return result.sort((a, b) => {
     const dateA = a.date || a.createdAt || '';
@@ -958,13 +1013,24 @@ export async function getClientBookingsFromFirestore(
     const tenantSnap = await getDocs(collection(db, `tenants/${tenantId}/appointments`));
     tenantSnap.forEach((docSnap) => {
       const data = docSnap.data() as any;
-      if (data.clientId === clientId) {
+      if (data.clientId === clientId || !data.clientId) {
         listMap.set(docSnap.id, { id: docSnap.id, ...data } as ClientBooking);
       }
     });
   } catch (error) {
     console.warn('Erro ao ler agendamentos do cliente no Firestore:', error);
   }
+
+  // 3. Coleção raiz por clientId
+  try {
+    const globalSnap = await getDocs(collection(db, 'appointments'));
+    globalSnap.forEach((docSnap) => {
+      const data = docSnap.data() as any;
+      if (data.clientId === clientId) {
+        listMap.set(docSnap.id, { id: docSnap.id, ...data } as ClientBooking);
+      }
+    });
+  } catch {}
 
   return Array.from(listMap.values());
 }
@@ -978,8 +1044,11 @@ export function subscribeToTenantAppointments(
 ): () => void {
   const cleanTenantId = tenantId || 'navalha-ouro';
 
+  const unsubs: (() => void)[] = [];
+
   try {
-    const unsubscribe = onSnapshot(
+    // Escuta na subcoleção do tenant
+    const unsub1 = onSnapshot(
       collection(db, `tenants/${cleanTenantId}/appointments`),
       (snapshot) => {
         const list: any[] = [];
@@ -994,8 +1063,29 @@ export function subscribeToTenantAppointments(
         console.warn('Listener onSnapshot tenant appointments note:', error);
       }
     );
+    unsubs.push(unsub1);
 
-    return unsubscribe;
+    // Escuta também na coleção global
+    const unsub2 = onSnapshot(
+      collection(db, 'appointments'),
+      (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        if (list.length > 0) {
+          onUpdate(list);
+        }
+      },
+      (error) => {
+        console.warn('Listener onSnapshot global appointments note:', error);
+      }
+    );
+    unsubs.push(unsub2);
+
+    return () => {
+      unsubs.forEach((fn) => fn());
+    };
   } catch (err) {
     console.warn('Falha ao iniciar onSnapshot:', err);
     return () => {};
