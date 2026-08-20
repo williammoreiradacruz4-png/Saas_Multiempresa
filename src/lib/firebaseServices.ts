@@ -991,29 +991,57 @@ export async function getAppointmentsFromFirestore(tenantId: string): Promise<an
  */
 export async function getClientBookingsFromFirestore(
   clientId: string,
-  tenantId: string = 'navalha-ouro'
+  tenantId: string = 'navalha-ouro',
+  clientEmail?: string,
+  clientPhone?: string
 ): Promise<ClientBooking[]> {
+  if (!clientId && !clientEmail && !clientPhone) {
+    return [];
+  }
+
   const listMap = new Map<string, ClientBooking>();
+  const cleanEmail = (clientEmail || '').trim().toLowerCase();
+  const cleanPhone = (clientPhone || '').replace(/\D/g, '');
 
   // 1. LocalStorage do cliente
-  try {
-    const cached = localStorage.getItem(`client_bookings_${clientId}`);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((item) => {
-          if (item && item.id) listMap.set(item.id, item);
-        });
+  if (clientId) {
+    try {
+      const cached = localStorage.getItem(`client_bookings_${clientId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item) => {
+            if (item && item.id) listMap.set(item.id, item);
+          });
+        }
+      }
+    } catch {}
+  }
+
+  // Helper de correspondência do cliente
+  const isMatch = (data: any): boolean => {
+    if (!data) return false;
+    if (clientId && data.clientId && String(data.clientId) === String(clientId)) {
+      return true;
+    }
+    if (cleanEmail && data.clientEmail && String(data.clientEmail).trim().toLowerCase() === cleanEmail) {
+      return true;
+    }
+    if (cleanPhone && data.clientPhone) {
+      const itemPhone = String(data.clientPhone).replace(/\D/g, '');
+      if (itemPhone && (itemPhone === cleanPhone || itemPhone.endsWith(cleanPhone) || cleanPhone.endsWith(itemPhone))) {
+        return true;
       }
     }
-  } catch {}
+    return false;
+  };
 
-  // 2. Firestore por clientId
+  // 2. Firestore por clientId na subcoleção do tenant
   try {
     const tenantSnap = await getDocs(collection(db, `tenants/${tenantId}/appointments`));
     tenantSnap.forEach((docSnap) => {
       const data = docSnap.data() as any;
-      if (data.clientId === clientId || !data.clientId) {
+      if (isMatch(data)) {
         listMap.set(docSnap.id, { id: docSnap.id, ...data } as ClientBooking);
       }
     });
@@ -1026,7 +1054,7 @@ export async function getClientBookingsFromFirestore(
     const globalSnap = await getDocs(collection(db, 'appointments'));
     globalSnap.forEach((docSnap) => {
       const data = docSnap.data() as any;
-      if (data.clientId === clientId) {
+      if (isMatch(data)) {
         listMap.set(docSnap.id, { id: docSnap.id, ...data } as ClientBooking);
       }
     });
