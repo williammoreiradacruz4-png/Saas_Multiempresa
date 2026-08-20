@@ -306,7 +306,12 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
     async function loadUserBookings() {
       if (user?.id) {
         try {
-          const userBookings = await getClientBookingsFromFirestore(user.id, tenantSubdomain);
+          const userBookings = await getClientBookingsFromFirestore(
+            user.id,
+            tenantSubdomain,
+            user.email,
+            user.phone
+          );
           setBookings(userBookings || []);
         } catch (e) {
           console.warn('Erro ao carregar agendamentos do cliente:', e);
@@ -317,7 +322,7 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
       }
     }
     loadUserBookings();
-  }, [user?.id, tenantSubdomain]);
+  }, [user?.id, user?.email, user?.phone, tenantSubdomain]);
 
   // Auth Handler: Register or Login
   const handleAuth = async (e: React.FormEvent) => {
@@ -367,7 +372,12 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
           } catch {}
           // Busca agendamentos reais do usuário logado
           try {
-            const bks = await getClientBookingsFromFirestore(result.data.id, tenantSubdomain);
+            const bks = await getClientBookingsFromFirestore(
+              result.data.id,
+              tenantSubdomain,
+              result.data.email,
+              result.data.phone
+            );
             setBookings(bks || []);
           } catch {
             setBookings([]);
