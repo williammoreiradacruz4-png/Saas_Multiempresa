@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import barberMascotImg from '../assets/images/barber_mascot_1786873404835.jpg';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   Scissors,
   PieChart,
@@ -209,35 +210,39 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
       ]);
 
       if (cloudApts && cloudApts.length > 0) {
-        const mappedApts: BarberAppointment[] = cloudApts.map((a: any) => ({
-          id: a.id || `apt-${Date.now()}`,
-          clientName: a.clientName || 'Cliente Online',
-          clientPhone: a.clientPhone || '(11) 98765-4321',
-          serviceName: a.serviceName || 'Serviço',
-          servicePrice: typeof a.servicePrice === 'number' ? a.servicePrice : 50.0,
-          barberName: a.barberName || 'Barbeiro',
-          dateTime: a.formattedDate || a.date || 'Hoje',
-          time: a.time || '14:00',
-          origin: (a.origin as any) || 'Painel Cliente',
-          status: (a.status as any) || 'Agendado',
-        }));
+        const mappedApts: BarberAppointment[] = cloudApts
+          .filter(Boolean)
+          .map((a: any) => ({
+            id: String(a?.id || `apt-${Date.now()}-${Math.random()}`),
+            clientName: String(a?.clientName || a?.name || 'Cliente Online'),
+            clientPhone: String(a?.clientPhone || a?.phone || '(11) 98765-4321'),
+            serviceName: String(a?.serviceName || 'Serviço'),
+            servicePrice: typeof a?.servicePrice === 'number' ? a.servicePrice : (parseFloat(a?.servicePrice) || 50.0),
+            barberName: String(a?.barberName || 'Barbeiro'),
+            dateTime: String(a?.formattedDate || a?.dateTime || a?.date || 'Hoje'),
+            time: String(a?.time || '14:00'),
+            origin: (a?.origin as any) || 'Painel Cliente',
+            status: (a?.status as any) || 'Agendado',
+          }));
         setAppointments(mappedApts);
       } else {
         setAppointments([]);
       }
 
       if (cloudClients && cloudClients.length > 0) {
-        const mappedClients: BarberClient[] = cloudClients.map((c: any) => ({
-          id: c.id || c.uid || `cli-${Date.now()}`,
-          name: c.name || 'Cliente',
-          phone: c.phone || '',
-          email: c.email || '',
-          totalVisits: c.totalVisits || 1,
-          fidelityPoints: c.fidelityPoints || 0,
-          lastVisit: c.lastVisit || 'Recente',
-          favoriteBarber: c.favoriteBarber || 'Barbeiro Principal',
-          status: 'Ativo',
-        }));
+        const mappedClients: BarberClient[] = cloudClients
+          .filter(Boolean)
+          .map((c: any) => ({
+            id: String(c?.id || c?.uid || `cli-${Date.now()}-${Math.random()}`),
+            name: String(c?.name || 'Cliente'),
+            phone: String(c?.phone || ''),
+            email: String(c?.email || ''),
+            totalVisits: typeof c?.totalVisits === 'number' ? c.totalVisits : 1,
+            fidelityPoints: typeof c?.fidelityPoints === 'number' ? c.fidelityPoints : (parseInt(c?.fidelityPoints) || 0),
+            lastVisit: String(c?.lastVisit || 'Recente'),
+            favoriteBarber: String(c?.favoriteBarber || 'Barbeiro Principal'),
+            status: 'Ativo',
+          }));
         setClients(mappedClients);
       } else {
         setClients([]);
@@ -260,18 +265,20 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
     // 1. Ouvinte em tempo real via Firestore onSnapshot para Agendamentos
     const unsubscribeSnapshot = subscribeToTenantAppointments(tenantSubdomain, (liveApts) => {
       if (liveApts && liveApts.length > 0) {
-        const mapped: BarberAppointment[] = liveApts.map((a: any) => ({
-          id: a.id || `apt-${Date.now()}`,
-          clientName: a.clientName || 'Cliente Online',
-          clientPhone: a.clientPhone || '(11) 98765-4321',
-          serviceName: a.serviceName || 'Serviço',
-          servicePrice: typeof a.servicePrice === 'number' ? a.servicePrice : 50.0,
-          barberName: a.barberName || 'Barbeiro',
-          dateTime: a.formattedDate || a.date || 'Hoje',
-          time: a.time || '14:00',
-          origin: (a.origin as any) || 'Painel Cliente',
-          status: (a.status as any) || 'Agendado',
-        }));
+        const mapped: BarberAppointment[] = liveApts
+          .filter(Boolean)
+          .map((a: any) => ({
+            id: String(a?.id || `apt-${Date.now()}-${Math.random()}`),
+            clientName: String(a?.clientName || a?.name || 'Cliente Online'),
+            clientPhone: String(a?.clientPhone || a?.phone || '(11) 98765-4321'),
+            serviceName: String(a?.serviceName || 'Serviço'),
+            servicePrice: typeof a?.servicePrice === 'number' ? a.servicePrice : (parseFloat(a?.servicePrice) || 50.0),
+            barberName: String(a?.barberName || 'Barbeiro'),
+            dateTime: String(a?.formattedDate || a?.dateTime || a?.date || 'Hoje'),
+            time: String(a?.time || '14:00'),
+            origin: (a?.origin as any) || 'Painel Cliente',
+            status: (a?.status as any) || 'Agendado',
+          }));
         setAppointments(mapped);
       }
     });
@@ -279,17 +286,19 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
     // 2. Ouvinte em tempo real via Firestore onSnapshot para Clientes da Barbearia
     const unsubscribeClients = subscribeToTenantClients(tenantSubdomain, (liveClients) => {
       if (liveClients) {
-        const mapped: BarberClient[] = liveClients.map((c: any) => ({
-          id: c.id || c.uid || `cli-${Date.now()}`,
-          name: c.name || 'Cliente',
-          phone: c.phone || '',
-          email: c.email || '',
-          totalVisits: c.totalVisits || 1,
-          fidelityPoints: typeof c.fidelityPoints === 'number' ? c.fidelityPoints : 0,
-          lastVisit: c.lastVisit || 'Recente',
-          favoriteBarber: c.favoriteBarber || 'Barbeiro Principal',
-          status: 'Ativo',
-        }));
+        const mapped: BarberClient[] = liveClients
+          .filter(Boolean)
+          .map((c: any) => ({
+            id: String(c?.id || c?.uid || `cli-${Date.now()}-${Math.random()}`),
+            name: String(c?.name || 'Cliente'),
+            phone: String(c?.phone || ''),
+            email: String(c?.email || ''),
+            totalVisits: typeof c?.totalVisits === 'number' ? c.totalVisits : 1,
+            fidelityPoints: typeof c?.fidelityPoints === 'number' ? c.fidelityPoints : (parseInt(c?.fidelityPoints) || 0),
+            lastVisit: String(c?.lastVisit || 'Recente'),
+            favoriteBarber: String(c?.favoriteBarber || 'Barbeiro Principal'),
+            status: 'Ativo',
+          }));
         setClients(mapped);
       }
     });
@@ -995,34 +1004,43 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                 </div>
 
                 <div className="divide-y divide-gray-800">
-                  {appointments.slice(0, 4).map((apt) => (
-                    <div
-                      key={apt.id}
-                      className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-800/40 px-2 rounded-lg transition"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-white">{apt.clientName}</p>
-                          {apt.origin === 'Painel Cliente' && (
-                            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-medium">
-                              App Cliente
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {apt.serviceName} • <span className="text-gray-300">Barbeiro: {apt.barberName}</span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-mono text-emerald-400 font-semibold">
-                          {apt.servicePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                        <span className="text-sm font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg font-mono">
-                          {apt.time}
-                        </span>
-                      </div>
+                  {appointments.length === 0 ? (
+                    <div className="py-6 text-center text-gray-500 text-xs">
+                      Nenhum agendamento ativo ou pendente no momento.
                     </div>
-                  ))}
+                  ) : (
+                    appointments.slice(0, 4).map((apt) => {
+                      const safePrice = typeof apt.servicePrice === 'number' ? apt.servicePrice : (parseFloat(String(apt.servicePrice)) || 50.0);
+                      return (
+                        <div
+                          key={apt.id || `apt-${Math.random()}`}
+                          className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-800/40 px-2 rounded-lg transition"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-white">{apt.clientName || 'Cliente'}</p>
+                              {apt.origin === 'Painel Cliente' && (
+                                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-medium">
+                                  App Cliente
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {apt.serviceName || 'Serviço'} • <span className="text-gray-300">Barbeiro: {apt.barberName || 'Barbeiro'}</span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-mono text-emerald-400 font-semibold">
+                              {safePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                            <span className="text-sm font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg font-mono">
+                              {apt.time || '14:00'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -1214,202 +1232,211 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
 
           {/* 2. TELA: AGENDAMENTOS */}
           {activeTab === 'agendamentos' && (
-            <div id="tab-agendamentos" className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-amber-400">Pedidos de Agendamento Online & Balcão</h2>
-                    <span className="text-xs bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded-full border border-amber-500/30">
-                      {appointments.length} Total
-                    </span>
+            <ErrorBoundary fallbackTitle="Erro ao carregar lista de agendamentos">
+              <div id="tab-agendamentos" className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold text-amber-400">Pedidos de Agendamento Online & Balcão</h2>
+                      <span className="text-xs bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded-full border border-amber-500/30">
+                        {appointments.length} Total
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      Sincronização em tempo real com o Portal do Cliente e cadastros presenciais.
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-400">
-                    Sincronização em tempo real com o Portal do Cliente e cadastros presenciais.
-                  </p>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => loadTenantData(true)}
+                      disabled={isSyncingAppointments}
+                      className="bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-gray-700 transition cursor-pointer"
+                      title="Sincronizar agendamentos do banco de dados agora"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAppointments ? 'animate-spin text-amber-400' : ''}`} />
+                      <span>{isSyncingAppointments ? 'Sincronizando...' : 'Atualizar'}</span>
+                    </button>
+
+                    <input
+                      type="text"
+                      value={appointmentSearch}
+                      onChange={(e) => setAppointmentSearch(e.target.value)}
+                      placeholder="Buscar cliente ou barbeiro..."
+                      className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddAppointment}
+                      className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Novo Horário</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => loadTenantData(true)}
-                    disabled={isSyncingAppointments}
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-gray-700 transition cursor-pointer"
-                    title="Sincronizar agendamentos do banco de dados agora"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAppointments ? 'animate-spin text-amber-400' : ''}`} />
-                    <span>{isSyncingAppointments ? 'Sincronizando...' : 'Atualizar'}</span>
-                  </button>
-
-                  <input
-                    type="text"
-                    value={appointmentSearch}
-                    onChange={(e) => setAppointmentSearch(e.target.value)}
-                    placeholder="Buscar cliente ou barbeiro..."
-                    className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddAppointment}
-                    className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Novo Horário</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-xl">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm min-w-[700px]">
-                    <thead className="bg-gray-800/80 text-gray-400 uppercase text-xs">
-                      <tr>
-                        <th className="p-4">Cliente</th>
-                        <th className="p-4">Serviço</th>
-                        <th className="p-4">Profissional</th>
-                        <th className="p-4">Data/Hora</th>
-                        <th className="p-4">Origem</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4 text-right">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800">
-                      {appointments.length === 0 ? (
+                <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-xl">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm min-w-[700px]">
+                      <thead className="bg-gray-800/80 text-gray-400 uppercase text-xs">
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-gray-400 space-y-2">
-                            <Calendar className="w-10 h-10 text-gray-600 mx-auto" />
-                            <p className="text-sm font-semibold text-gray-300">Nenhum agendamento pendente no momento</p>
-                            <p className="text-xs text-gray-500 max-w-md mx-auto">
-                              Assim que um cliente agendar pelo aplicativo ou você registrar um novo horário, ele aparecerá aqui instantaneamente.
-                            </p>
-                            <div className="pt-2">
-                              <button
-                                type="button"
-                                onClick={handleAddAppointment}
-                                className="inline-flex items-center gap-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold px-3 py-1.5 rounded-lg transition"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Criar Primeiro Agendamento</span>
-                              </button>
-                            </div>
-                          </td>
+                          <th className="p-4">Cliente</th>
+                          <th className="p-4">Serviço</th>
+                          <th className="p-4">Profissional</th>
+                          <th className="p-4">Data/Hora</th>
+                          <th className="p-4">Origem</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4 text-right">Ações</th>
                         </tr>
-                      ) : (
-                        appointments
-                          .filter(
-                            (apt) =>
-                              apt.clientName.toLowerCase().includes(appointmentSearch.toLowerCase()) ||
-                              apt.barberName.toLowerCase().includes(appointmentSearch.toLowerCase())
-                          )
-                          .map((apt) => (
-                          <tr key={apt.id} className="hover:bg-gray-800/40 transition">
-                            <td className="p-4">
-                              <p className="font-semibold text-white">{apt.clientName}</p>
-                              <p className="text-xs text-gray-400 font-mono">{apt.clientPhone}</p>
-                            </td>
-                            <td className="p-4">
-                              <p className="text-gray-200">{apt.serviceName}</p>
-                              <p className="text-xs font-mono text-emerald-400">
-                                {apt.servicePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </thead>
+                      <tbody className="divide-y divide-gray-800">
+                        {appointments.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-gray-400 space-y-2">
+                              <Calendar className="w-10 h-10 text-gray-600 mx-auto" />
+                              <p className="text-sm font-semibold text-gray-300">Nenhum agendamento pendente no momento</p>
+                              <p className="text-xs text-gray-500 max-w-md mx-auto">
+                                Assim que um cliente agendar pelo aplicativo ou você registrar um novo horário, ele aparecerá aqui instantaneamente.
                               </p>
-                            </td>
-                            <td className="p-4 text-gray-300 font-medium">{apt.barberName}</td>
-                            <td className="p-4">
-                              <span className="font-mono text-amber-400 text-xs font-semibold bg-amber-500/10 px-2.5 py-1 rounded">
-                                {apt.dateTime} - {apt.time}
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                  apt.origin === 'Painel Cliente'
-                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                    : 'bg-gray-800 text-gray-300'
-                                }`}
-                              >
-                                {apt.origin}
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <span
-                                className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                                  apt.status === 'Agendado'
-                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                    : apt.status === 'Em Andamento'
-                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                }`}
-                              >
-                                {apt.status}
-                              </span>
-                            </td>
-                            <td className="p-4 text-right space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  // Localiza o cliente correspondente para carimbar
-                                  const targetClient = clients.find(
-                                    (c) => c.name.toLowerCase() === apt.clientName.toLowerCase() || c.phone === apt.clientPhone
-                                  );
-                                  if (targetClient) {
-                                    handleQuickStampForClient(targetClient);
-                                  } else {
-                                    // Cria ou seleciona cliente
-                                    const fallbackCli: BarberClient = {
-                                      id: `cli-${Date.now()}`,
-                                      name: apt.clientName,
-                                      phone: apt.clientPhone,
-                                      email: 'cliente@barbearia.com',
-                                      totalVisits: 1,
-                                      fidelityPoints: 1,
-                                      lastVisit: 'Hoje',
-                                      favoriteBarber: apt.barberName,
-                                      status: 'Ativo',
-                                    };
-                                    setClients((prev) => [fallbackCli, ...prev]);
-                                    updateClientFidelityInFirestore(fallbackCli.id, 1, tenantSubdomain);
-                                    showToast(`⭐ Selo #1 carimbado para ${apt.clientName}!`);
-                                  }
-                                }}
-                                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-xs font-bold transition cursor-pointer inline-flex items-center gap-1"
-                                title="Carimbar Selo de Fidelidade para este atendimento"
-                              >
-                                <Sparkles className="w-3 h-3 text-amber-400" />
-                                <span>+1 Selo</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateAppointmentStatus(apt.id, 'Em Andamento')}
-                                className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-xs font-semibold transition cursor-pointer"
-                                title="Iniciar Atendimento"
-                              >
-                                Iniciar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  handleUpdateAppointmentStatus(apt.id, 'Concluído');
-                                  // Prompt de carimbo automático ao concluir
-                                  const targetClient = clients.find(
-                                    (c) => c.name.toLowerCase() === apt.clientName.toLowerCase() || c.phone === apt.clientPhone
-                                  );
-                                  if (targetClient) {
-                                    handleQuickStampForClient(targetClient);
-                                  }
-                                }}
-                                className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-semibold transition cursor-pointer"
-                                title="Finalizar Atendimento e Carimbar Selo"
-                              >
-                                Concluir
-                              </button>
+                              <div className="pt-2">
+                                <button
+                                  type="button"
+                                  onClick={handleAddAppointment}
+                                  className="inline-flex items-center gap-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold px-3 py-1.5 rounded-lg transition"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Criar Primeiro Agendamento</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          appointments
+                            .filter((apt) => {
+                              if (!apt) return false;
+                              const q = (appointmentSearch || '').toLowerCase().trim();
+                              if (!q) return true;
+                              const cName = String(apt.clientName || '').toLowerCase();
+                              const bName = String(apt.barberName || '').toLowerCase();
+                              const sName = String(apt.serviceName || '').toLowerCase();
+                              const cPhone = String(apt.clientPhone || '').toLowerCase();
+                              return cName.includes(q) || bName.includes(q) || sName.includes(q) || cPhone.includes(q);
+                            })
+                            .map((apt) => {
+                              const safePrice = typeof apt.servicePrice === 'number' ? apt.servicePrice : (parseFloat(String(apt.servicePrice)) || 50.0);
+                              return (
+                                <tr key={apt.id || `apt-${Math.random()}`} className="hover:bg-gray-800/40 transition">
+                                  <td className="p-4">
+                                    <p className="font-semibold text-white">{apt.clientName || 'Cliente'}</p>
+                                    <p className="text-xs text-gray-400 font-mono">{apt.clientPhone || '(Não informado)'}</p>
+                                  </td>
+                                  <td className="p-4">
+                                    <p className="text-gray-200">{apt.serviceName || 'Serviço'}</p>
+                                    <p className="text-xs font-mono text-emerald-400">
+                                      {safePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </p>
+                                  </td>
+                                  <td className="p-4 text-gray-300 font-medium">{apt.barberName || 'Barbeiro'}</td>
+                                  <td className="p-4">
+                                    <span className="font-mono text-amber-400 text-xs font-semibold bg-amber-500/10 px-2.5 py-1 rounded">
+                                      {apt.dateTime || 'Hoje'} - {apt.time || '14:00'}
+                                    </span>
+                                  </td>
+                                  <td className="p-4">
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        apt.origin === 'Painel Cliente'
+                                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                          : 'bg-gray-800 text-gray-300'
+                                      }`}
+                                    >
+                                      {apt.origin || 'Painel Cliente'}
+                                    </span>
+                                  </td>
+                                  <td className="p-4">
+                                    <span
+                                      className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                        apt.status === 'Agendado'
+                                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                          : apt.status === 'Em Andamento'
+                                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      }`}
+                                    >
+                                      {apt.status || 'Agendado'}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 text-right space-x-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const cName = String(apt.clientName || '').toLowerCase();
+                                        const targetClient = clients.find(
+                                          (c) => (c.name && c.name.toLowerCase() === cName) || (c.phone && c.phone === apt.clientPhone)
+                                        );
+                                        if (targetClient) {
+                                          handleQuickStampForClient(targetClient);
+                                        } else {
+                                          const fallbackCli: BarberClient = {
+                                            id: `cli-${Date.now()}`,
+                                            name: apt.clientName || 'Cliente',
+                                            phone: apt.clientPhone || '',
+                                            email: 'cliente@barbearia.com',
+                                            totalVisits: 1,
+                                            fidelityPoints: 1,
+                                            lastVisit: 'Hoje',
+                                            favoriteBarber: apt.barberName || 'Barbeiro Principal',
+                                            status: 'Ativo',
+                                          };
+                                          setClients((prev) => [fallbackCli, ...prev]);
+                                          updateClientFidelityInFirestore(fallbackCli.id, 1, tenantSubdomain);
+                                          showToast(`⭐ Selo #1 carimbado para ${apt.clientName || 'Cliente'}!`);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-xs font-bold transition cursor-pointer inline-flex items-center gap-1"
+                                      title="Carimbar Selo de Fidelidade para este atendimento"
+                                    >
+                                      <Sparkles className="w-3 h-3 text-amber-400" />
+                                      <span>+1 Selo</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateAppointmentStatus(apt.id, 'Em Andamento')}
+                                      className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-xs font-semibold transition cursor-pointer"
+                                      title="Iniciar Atendimento"
+                                    >
+                                      Iniciar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleUpdateAppointmentStatus(apt.id, 'Concluído');
+                                        const cName = String(apt.clientName || '').toLowerCase();
+                                        const targetClient = clients.find(
+                                          (c) => (c.name && c.name.toLowerCase() === cName) || (c.phone && c.phone === apt.clientPhone)
+                                        );
+                                        if (targetClient) {
+                                          handleQuickStampForClient(targetClient);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-semibold transition cursor-pointer"
+                                      title="Finalizar Atendimento e Carimbar Selo"
+                                    >
+                                      Concluir
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
+            </ErrorBoundary>
           )}
 
           {/* 3. TELA: CLIENTES & FIDELIDADE */}
