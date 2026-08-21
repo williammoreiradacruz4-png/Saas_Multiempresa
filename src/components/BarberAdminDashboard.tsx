@@ -142,7 +142,7 @@ type BarberTab =
   | 'caixa'
   | 'configuracoes';
 
-// 🌟 AJUSTE CRÍTICO: Exportação nomeada para bater com as chaves {} do App.tsx
+// 🌟 AJUSTE DE REQUISITO: Exportação nomeada explícita para evitar falhas no App.tsx
 export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
   tenantName = 'Barbearia Navalha de Ouro',
   tenantSubdomain = 'navalha-ouro',
@@ -205,7 +205,7 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
   const [banners, setBanners] = useState<BarberPromotionBanner[]>(DEFAULT_PROMOTION_BANNERS);
   const [isSyncingAppointments, setIsSyncingAppointments] = useState<boolean>(false);
 
-  // Carregar dados reais vindos do Firebase com remoção ativa de duplicados (Evita o erro RemoveChild)
+  // Carregar dados reais vindos do Firebase com filtragem de registros idênticos
   const loadTenantData = async (showNotification = false) => {
     setIsSyncingAppointments(true);
     try {
