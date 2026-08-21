@@ -31,7 +31,8 @@ import {
   Mail,
   UserCheck,
   Search,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 import { ClientUser, ClientBooking, BarberClient, BarberPromotionBanner } from '../types';
 import {
@@ -166,6 +167,7 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
     return today.toISOString().split('T')[0];
   });
   const [selectedTime, setSelectedTime] = useState<string>('14:30');
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
   // Promotion Banners State
   const [banners, setBanners] = useState<BarberPromotionBanner[]>(DEFAULT_PROMOTION_BANNERS);
@@ -397,45 +399,54 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
   };
 
   // Confirm booking
-  const handleConfirmBooking = (e: React.FormEvent) => {
+  const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingBooking) return;
+    setIsSubmittingBooking(true);
 
-    const service = AVAILABLE_SERVICES.find((s) => s.id === selectedServiceId) || AVAILABLE_SERVICES[0];
+    try {
+      const service = AVAILABLE_SERVICES.find((s) => s.id === selectedServiceId) || AVAILABLE_SERVICES[0];
 
-    const dateParts = selectedDate.split('-');
-    const formatted = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : selectedDate;
+      const dateParts = selectedDate.split('-');
+      const formatted = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : selectedDate;
 
-    const newBooking: ClientBooking = {
-      id: `bk-${Date.now()}`,
-      serviceId: service.id,
-      serviceName: service.name,
-      servicePrice: service.price,
-      barberName: selectedBarber,
-      date: selectedDate,
-      formattedDate: formatted,
-      time: selectedTime,
-      status: 'Agendado',
-      createdAt: new Date().toISOString(),
-      clientId: user?.id,
-      clientName: user?.name || 'Cliente Online',
-      clientPhone: user?.phone || '(11) 98765-4321',
-      clientEmail: user?.email || '',
-      tenantId: tenantSubdomain,
-    };
+      const newBooking: ClientBooking = {
+        id: `bk-${Date.now()}`,
+        serviceId: service.id,
+        serviceName: service.name,
+        servicePrice: service.price,
+        barberName: selectedBarber,
+        date: selectedDate,
+        formattedDate: formatted,
+        time: selectedTime,
+        status: 'Agendado',
+        createdAt: new Date().toISOString(),
+        clientId: user?.id,
+        clientName: user?.name || 'Cliente Online',
+        clientPhone: user?.phone || '(11) 98765-4321',
+        clientEmail: user?.email || '',
+        tenantId: tenantSubdomain,
+      };
 
-    setBookings((prev) => [newBooking, ...prev]);
-    setLastCreatedBooking(newBooking);
+      setBookings((prev) => [newBooking, ...prev]);
+      setLastCreatedBooking(newBooking);
 
-    // Save to Firestore & LocalStorage
-    saveBookingToFirestore(tenantSubdomain, newBooking, {
-      id: user?.id,
-      name: user?.name,
-      phone: user?.phone,
-      email: user?.email,
-    });
+      // Save to Firestore & LocalStorage
+      await saveBookingToFirestore(tenantSubdomain, newBooking, {
+        id: user?.id,
+        name: user?.name,
+        phone: user?.phone,
+        email: user?.email,
+      });
 
-    setCurrentScreen('success');
-    showToast('Agendamento confirmado e gravado no Firestore!');
+      setCurrentScreen('success');
+      showToast('Agendamento confirmado e gravado no Firestore!');
+    } catch (err) {
+      console.error('Erro ao confirmar agendamento:', err);
+      showToast('Erro ao salvar agendamento. Tente novamente.');
+    } finally {
+      setIsSubmittingBooking(false);
+    }
   };
 
   // Cancel booking
@@ -1262,10 +1273,20 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
               <button
                 type="submit"
                 id="btn-confirm-booking"
-                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-gray-950 font-bold py-4 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-2"
+                disabled={isSubmittingBooking}
+                className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99] text-gray-950 font-bold py-4 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-2"
               >
-                <CheckCircle2 className="w-5 h-5" />
-                <span>Confirmar Agendamento</span>
+                {isSubmittingBooking ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Confirmando Agendamento...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Confirmar Agendamento</span>
+                  </>
+                )}
               </button>
             </form>
           </div>
