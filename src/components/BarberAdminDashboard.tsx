@@ -210,40 +210,48 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
       ]);
 
       if (cloudApts && cloudApts.length > 0) {
-        const mappedApts: BarberAppointment[] = cloudApts
+        const aptMap = new Map<string, BarberAppointment>();
+        cloudApts
           .filter(Boolean)
-          .map((a: any) => ({
-            id: String(a?.id || `apt-${Date.now()}-${Math.random()}`),
-            clientName: String(a?.clientName || a?.name || 'Cliente Online'),
-            clientPhone: String(a?.clientPhone || a?.phone || '(11) 98765-4321'),
-            serviceName: String(a?.serviceName || 'Serviço'),
-            servicePrice: typeof a?.servicePrice === 'number' ? a.servicePrice : (parseFloat(a?.servicePrice) || 50.0),
-            barberName: String(a?.barberName || 'Barbeiro'),
-            dateTime: String(a?.formattedDate || a?.dateTime || a?.date || 'Hoje'),
-            time: String(a?.time || '14:00'),
-            origin: (a?.origin as any) || 'Painel Cliente',
-            status: (a?.status as any) || 'Agendado',
-          }));
-        setAppointments(mappedApts);
+          .forEach((a: any, idx: number) => {
+            const safeId = String(a?.id || `apt-${Date.now()}-${idx}`);
+            aptMap.set(safeId, {
+              id: safeId,
+              clientName: String(a?.clientName || a?.name || 'Cliente Online'),
+              clientPhone: String(a?.clientPhone || a?.phone || '(11) 98765-4321'),
+              serviceName: String(a?.serviceName || 'Serviço'),
+              servicePrice: typeof a?.servicePrice === 'number' ? a.servicePrice : (parseFloat(a?.servicePrice) || 50.0),
+              barberName: String(a?.barberName || 'Barbeiro'),
+              dateTime: String(a?.formattedDate || a?.dateTime || a?.date || 'Hoje'),
+              time: String(a?.time || '14:00'),
+              origin: (a?.origin as any) || 'Painel Cliente',
+              status: (a?.status as any) || 'Agendado',
+            });
+          });
+        setAppointments(Array.from(aptMap.values()));
       } else {
         setAppointments([]);
       }
 
       if (cloudClients && cloudClients.length > 0) {
-        const mappedClients: BarberClient[] = cloudClients
+        const cliMap = new Map<string, BarberClient>();
+        cloudClients
           .filter(Boolean)
-          .map((c: any) => ({
-            id: String(c?.id || c?.uid || `cli-${Date.now()}-${Math.random()}`),
-            name: String(c?.name || 'Cliente'),
-            phone: String(c?.phone || ''),
-            email: String(c?.email || ''),
-            totalVisits: typeof c?.totalVisits === 'number' ? c.totalVisits : 1,
-            fidelityPoints: typeof c?.fidelityPoints === 'number' ? c.fidelityPoints : (parseInt(c?.fidelityPoints) || 0),
-            lastVisit: String(c?.lastVisit || 'Recente'),
-            favoriteBarber: String(c?.favoriteBarber || 'Barbeiro Principal'),
-            status: 'Ativo',
-          }));
-        setClients(mappedClients);
+          .forEach((c: any, idx: number) => {
+            const safeId = String(c?.id || c?.uid || `cli-${Date.now()}-${idx}`);
+            cliMap.set(safeId, {
+              id: safeId,
+              name: String(c?.name || 'Cliente'),
+              phone: String(c?.phone || ''),
+              email: String(c?.email || ''),
+              totalVisits: typeof c?.totalVisits === 'number' ? c.totalVisits : 1,
+              fidelityPoints: typeof c?.fidelityPoints === 'number' ? c.fidelityPoints : (parseInt(c?.fidelityPoints) || 0),
+              lastVisit: String(c?.lastVisit || 'Recente'),
+              favoriteBarber: String(c?.favoriteBarber || 'Barbeiro Principal'),
+              status: 'Ativo',
+            });
+          });
+        setClients(Array.from(cliMap.values()));
       } else {
         setClients([]);
       }
@@ -265,41 +273,49 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
     // 1. Ouvinte em tempo real via Firestore onSnapshot para Agendamentos
     const unsubscribeSnapshot = subscribeToTenantAppointments(tenantSubdomain, (liveApts) => {
       if (liveApts && liveApts.length > 0) {
-        const mapped: BarberAppointment[] = liveApts
+        const aptMap = new Map<string, BarberAppointment>();
+        liveApts
           .filter(Boolean)
-          .map((a: any) => ({
-            id: String(a?.id || `apt-${Date.now()}-${Math.random()}`),
-            clientName: String(a?.clientName || a?.name || 'Cliente Online'),
-            clientPhone: String(a?.clientPhone || a?.phone || '(11) 98765-4321'),
-            serviceName: String(a?.serviceName || 'Serviço'),
-            servicePrice: typeof a?.servicePrice === 'number' ? a.servicePrice : (parseFloat(a?.servicePrice) || 50.0),
-            barberName: String(a?.barberName || 'Barbeiro'),
-            dateTime: String(a?.formattedDate || a?.dateTime || a?.date || 'Hoje'),
-            time: String(a?.time || '14:00'),
-            origin: (a?.origin as any) || 'Painel Cliente',
-            status: (a?.status as any) || 'Agendado',
-          }));
-        setAppointments(mapped);
+          .forEach((a: any, idx: number) => {
+            const safeId = String(a?.id || `apt-${Date.now()}-${idx}`);
+            aptMap.set(safeId, {
+              id: safeId,
+              clientName: String(a?.clientName || a?.name || 'Cliente Online'),
+              clientPhone: String(a?.clientPhone || a?.phone || '(11) 98765-4321'),
+              serviceName: String(a?.serviceName || 'Serviço'),
+              servicePrice: typeof a?.servicePrice === 'number' ? a.servicePrice : (parseFloat(a?.servicePrice) || 50.0),
+              barberName: String(a?.barberName || 'Barbeiro'),
+              dateTime: String(a?.formattedDate || a?.dateTime || a?.date || 'Hoje'),
+              time: String(a?.time || '14:00'),
+              origin: (a?.origin as any) || 'Painel Cliente',
+              status: (a?.status as any) || 'Agendado',
+            });
+          });
+        setAppointments(Array.from(aptMap.values()));
       }
     });
 
     // 2. Ouvinte em tempo real via Firestore onSnapshot para Clientes da Barbearia
     const unsubscribeClients = subscribeToTenantClients(tenantSubdomain, (liveClients) => {
       if (liveClients) {
-        const mapped: BarberClient[] = liveClients
+        const cliMap = new Map<string, BarberClient>();
+        liveClients
           .filter(Boolean)
-          .map((c: any) => ({
-            id: String(c?.id || c?.uid || `cli-${Date.now()}-${Math.random()}`),
-            name: String(c?.name || 'Cliente'),
-            phone: String(c?.phone || ''),
-            email: String(c?.email || ''),
-            totalVisits: typeof c?.totalVisits === 'number' ? c.totalVisits : 1,
-            fidelityPoints: typeof c?.fidelityPoints === 'number' ? c.fidelityPoints : (parseInt(c?.fidelityPoints) || 0),
-            lastVisit: String(c?.lastVisit || 'Recente'),
-            favoriteBarber: String(c?.favoriteBarber || 'Barbeiro Principal'),
-            status: 'Ativo',
-          }));
-        setClients(mapped);
+          .forEach((c: any, idx: number) => {
+            const safeId = String(c?.id || c?.uid || `cli-${Date.now()}-${idx}`);
+            cliMap.set(safeId, {
+              id: safeId,
+              name: String(c?.name || 'Cliente'),
+              phone: String(c?.phone || ''),
+              email: String(c?.email || ''),
+              totalVisits: typeof c?.totalVisits === 'number' ? c.totalVisits : 1,
+              fidelityPoints: typeof c?.fidelityPoints === 'number' ? c.fidelityPoints : (parseInt(c?.fidelityPoints) || 0),
+              lastVisit: String(c?.lastVisit || 'Recente'),
+              favoriteBarber: String(c?.favoriteBarber || 'Barbeiro Principal'),
+              status: 'Ativo',
+            });
+          });
+        setClients(Array.from(cliMap.values()));
       }
     });
 
@@ -307,19 +323,29 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
     const handleNewAppointmentEvent = (e: any) => {
       const detail = e.detail;
       if (detail) {
+        const safeId = String(detail.id || `apt-${Date.now()}`);
         const newApt: BarberAppointment = {
-          id: detail.id || `apt-${Date.now()}`,
-          clientName: detail.clientName || 'Cliente Online',
-          clientPhone: detail.clientPhone || '(11) 98765-4321',
-          serviceName: detail.serviceName || 'Serviço',
+          id: safeId,
+          clientName: String(detail.clientName || 'Cliente Online'),
+          clientPhone: String(detail.clientPhone || '(11) 98765-4321'),
+          serviceName: String(detail.serviceName || 'Serviço'),
           servicePrice: typeof detail.servicePrice === 'number' ? detail.servicePrice : 50.0,
-          barberName: detail.barberName || 'Barbeiro',
-          dateTime: detail.formattedDate || detail.date || 'Hoje',
-          time: detail.time || '14:00',
+          barberName: String(detail.barberName || 'Barbeiro'),
+          dateTime: String(detail.formattedDate || detail.date || 'Hoje'),
+          time: String(detail.time || '14:00'),
           origin: 'Painel Cliente',
           status: 'Agendado',
         };
-        setAppointments((prev) => [newApt, ...prev.filter((item) => item.id !== newApt.id)]);
+        setAppointments((prev) => {
+          const map = new Map<string, BarberAppointment>();
+          map.set(safeId, newApt);
+          prev.forEach((item) => {
+            if (!map.has(item.id)) {
+              map.set(item.id, item);
+            }
+          });
+          return Array.from(map.values());
+        });
         showToast(`🔔 Novo agendamento de ${newApt.clientName} recebido!`);
       }
     };
@@ -328,18 +354,28 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
     const handleNewClientEvent = (e: any) => {
       const detail = e.detail;
       if (detail && (!detail.tenantId || detail.tenantId === tenantSubdomain)) {
+        const safeId = String(detail.id || detail.uid || `cli-${Date.now()}`);
         const newCli: BarberClient = {
-          id: detail.id || detail.uid || `cli-${Date.now()}`,
-          name: detail.name || 'Novo Cliente',
-          phone: detail.phone || '',
-          email: detail.email || '',
+          id: safeId,
+          name: String(detail.name || 'Novo Cliente'),
+          phone: String(detail.phone || ''),
+          email: String(detail.email || ''),
           totalVisits: 1,
           fidelityPoints: typeof detail.fidelityPoints === 'number' ? detail.fidelityPoints : 0,
           lastVisit: 'Hoje (Recém cadastrado)',
           favoriteBarber: 'Barbeiro Principal',
           status: 'Ativo',
         };
-        setClients((prev) => [newCli, ...prev.filter((item) => item.id !== newCli.id && (newCli.email ? item.email !== newCli.email : true))]);
+        setClients((prev) => {
+          const map = new Map<string, BarberClient>();
+          map.set(safeId, newCli);
+          prev.forEach((item) => {
+            if (!map.has(item.id) && (!item.email || item.email !== newCli.email)) {
+              map.set(item.id, item);
+            }
+          });
+          return Array.from(map.values());
+        });
         showToast(`🔔 Novo cliente cadastrado: ${newCli.name}! Já disponível para envio de pontos de fidelidade.`);
       }
     };
@@ -559,6 +595,7 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
       <AnimatePresence>
         {toastMessage && (
           <motion.div
+            key="admin-toast-notification"
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -1009,11 +1046,12 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                       Nenhum agendamento ativo ou pendente no momento.
                     </div>
                   ) : (
-                    appointments.slice(0, 4).map((apt) => {
+                    appointments.slice(0, 4).map((apt, idx) => {
                       const safePrice = typeof apt.servicePrice === 'number' ? apt.servicePrice : (parseFloat(String(apt.servicePrice)) || 50.0);
+                      const rowKey = `dash-apt-${apt.id || 'temp'}-${idx}`;
                       return (
                         <div
-                          key={apt.id || `apt-${Math.random()}`}
+                          key={rowKey}
                           className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-800/40 px-2 rounded-lg transition"
                         >
                           <div>
@@ -1072,8 +1110,8 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                         className="bg-gray-950 border border-gray-700 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-amber-500 min-w-[220px]"
                       >
                         <option value="">-- Escolha o Cliente --</option>
-                        {clients.map((c) => (
-                          <option key={c.id} value={c.id}>
+                        {clients.map((c, idx) => (
+                          <option key={`dash-cli-opt-${c.id || 'cli'}-${idx}`} value={c.id}>
                             {c.name} • {c.fidelityPoints}/10 selos
                           </option>
                         ))}
@@ -1127,9 +1165,9 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                     <span>Equipe na Escala de Hoje</span>
                   </h3>
                   <div className="space-y-3">
-                    {employees.map((emp) => (
+                    {employees.map((emp, idx) => (
                       <div
-                        key={emp.id}
+                        key={`dash-scale-emp-${emp.id || 'emp'}-${idx}`}
                         className="flex items-center justify-between p-3 rounded-lg bg-gray-800/60 border border-gray-700/60"
                       >
                         <div className="flex items-center space-x-3">
@@ -1324,10 +1362,10 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                               const cPhone = String(apt.clientPhone || '').toLowerCase();
                               return cName.includes(q) || bName.includes(q) || sName.includes(q) || cPhone.includes(q);
                             })
-                            .map((apt) => {
+                            .map((apt, idx) => {
                               const safePrice = typeof apt.servicePrice === 'number' ? apt.servicePrice : (parseFloat(String(apt.servicePrice)) || 50.0);
                               return (
-                                <tr key={apt.id || `apt-${Math.random()}`} className="hover:bg-gray-800/40 transition">
+                                <tr key={`table-apt-${apt.id || 'apt'}-${idx}`} className="hover:bg-gray-800/40 transition">
                                   <td className="p-4">
                                     <p className="font-semibold text-white">{apt.clientName || 'Cliente'}</p>
                                     <p className="text-xs text-gray-400 font-mono">{apt.clientPhone || '(Não informado)'}</p>
@@ -1493,8 +1531,8 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                     className="bg-gray-950 border border-gray-800 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 min-w-[200px]"
                   >
                     <option value="">-- Selecionar Cliente --</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
+                    {clients.map((c, idx) => (
+                      <option key={`clients-tab-opt-${c.id || 'cli'}-${idx}`} value={c.id}>
                         {c.name} ({c.fidelityPoints}/10 selos)
                       </option>
                     ))}
@@ -1564,8 +1602,8 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                       ) : (
                         clients
                           .filter((c) => c.name.toLowerCase().includes(clientSearch.toLowerCase()))
-                          .map((cli) => (
-                            <tr key={cli.id} className="hover:bg-gray-800/40 transition">
+                          .map((cli, idx) => (
+                            <tr key={`clients-row-${cli.id || 'cli'}-${idx}`} className="hover:bg-gray-800/40 transition">
                               <td className="p-4 font-semibold text-white">
                                 <div>{cli.name}</div>
                                 {cli.email && <div className="text-[11px] text-gray-500">{cli.email}</div>}
@@ -1654,9 +1692,9 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {services.map((srv) => (
+                {services.map((srv, idx) => (
                   <div
-                    key={srv.id}
+                    key={`srv-grid-${srv.id || 'srv'}-${idx}`}
                     className="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-3 relative hover:border-amber-500/40 transition"
                   >
                     <div className="flex justify-between items-start">
@@ -1705,9 +1743,9 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {employees.map((emp) => (
+                {employees.map((emp, idx) => (
                   <div
-                    key={emp.id}
+                    key={`emp-grid-${emp.id || 'emp'}-${idx}`}
                     className="bg-gray-900 p-5 rounded-xl border border-gray-800 flex items-center justify-between shadow-lg"
                   >
                     <div className="flex items-center space-x-4">
@@ -1779,8 +1817,8 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                     <tbody className="divide-y divide-gray-800">
                       {products
                         .filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                        .map((prd) => (
-                          <tr key={prd.id} className="hover:bg-gray-800/40 transition">
+                        .map((prd, idx) => (
+                          <tr key={`prd-row-${prd.id || 'prd'}-${idx}`} className="hover:bg-gray-800/40 transition">
                             <td className="p-4 font-semibold text-white">{prd.name}</td>
                             <td className="p-4 text-xs text-gray-300">
                               <span className="font-mono text-amber-400">{prd.sku}</span> • {prd.category}
@@ -1886,8 +1924,8 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
                   Movimentações Recentes do Caixa
                 </div>
                 <div className="divide-y divide-gray-800 text-sm">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-gray-800/40 transition">
+                  {transactions.map((tx, idx) => (
+                    <div key={`tx-row-${tx.id || 'tx'}-${idx}`} className="p-4 flex items-center justify-between hover:bg-gray-800/40 transition">
                       <div className="flex items-center space-x-3">
                         <div
                           className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm ${
@@ -1948,8 +1986,9 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
       {/* Modal: Cartão Fidelidade do Cliente com Mascote */}
       <AnimatePresence>
         {selectedClientForFidelity && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div key="fidelity-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <motion.div
+              key="fidelity-modal-card"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -2003,7 +2042,7 @@ export const BarberAdminDashboard: React.FC<BarberAdminDashboardProps> = ({
 
                       return (
                         <div
-                          key={stampNum}
+                          key={`modal-stamp-${selectedClientForFidelity.id}-${stampNum}`}
                           onClick={() => {
                             const newPts = isStamped && selectedClientForFidelity.fidelityPoints === stampNum
                               ? stampNum - 1
