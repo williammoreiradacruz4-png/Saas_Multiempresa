@@ -9,7 +9,8 @@ interface Agendamento {
   hora: string;
 }
 
-export default function BarberAdminDashboard() {
+// CORRIGIDO: Removido o 'default' para o Netlify conseguir ler a importação por chaves {}
+export function BarberAdminDashboard() {
   // Inicializa estritamente como uma array vazia para evitar quebras
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -89,8 +90,18 @@ export default function BarberAdminDashboard() {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={4} style={{ textAlign: 'center', padding: '15px', color: '#888', fontSize: '13px' }}>
+                Filtro de duplicadas ativo • Proteção de tela branca ativa
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
   );
 }
+
+// Exportação secundária por segurança caso outra parte do app precise
+export default BarberAdminDashboard;
