@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// Interface para tipagem segura dos agendamentos
 interface Agendamento {
   id: string | number;
   cliente: string;
@@ -9,9 +8,7 @@ interface Agendamento {
   hora: string;
 }
 
-// CORRIGIDO: Removido o 'default' para o Netlify conseguir ler a importação por chaves {}
 export function BarberAdminDashboard() {
-  // Inicializa estritamente como uma array vazia para evitar quebras
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,25 +18,28 @@ export function BarberAdminDashboard() {
       try {
         setLoading(true);
         
-        // REQUISIÇÃO REAL: Altere aqui para a chamada correta da sua API se necessário
-        // const response = await fetch('/api/agendamentos');
-        // const dados = await response.json();
-        const dados: any = []; // Simulação de banco de dados vindo vazio do sistema
+        // 🌟 SEU BANCO DE DADOS REAL:
+        // Caso seu app use Firebase, Supabase ou fetch local, a chamada deve ser recolocada aqui.
+        // Exemplo: const response = await fetch('SUA_URL_AQUI'); const dados = await response.json();
+        
+        // Se você estivesse usando LocalStorage, descomente a linha abaixo:
+        // const dados Guardados = localStorage.getItem('agendamentos');
+        // const dados = dadosGuardados ? JSON.parse(dadosGuardados) : [];
 
-        // PROTEÇÃO 1: Se os dados forem nulos, indefinidos ou não forem uma lista, força uma array vazia
+        const dados: any = []; // ⚠️ Substitua esta linha vazia pela sua linha de dados original se souber qual é!
+
         if (!dados || !Array.isArray(dados)) {
           setAgendamentos([]);
           return;
         }
 
-        // FILTRO DE SEGURANÇA: Remove duplicados apenas se a lista contiver itens
         const agendamentosFiltrados = dados.filter((item, index, self) =>
           item && item.id && index === self.findIndex((t) => t && t.id === item.id)
         );
 
         setAgendamentos(agendamentosFiltrados);
       } catch (err) {
-        setError('Falha ao carregar agendamentos do servidor.');
+        setError('Falha ao carregar agendamentos.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -49,59 +49,45 @@ export function BarberAdminDashboard() {
     buscarAgendamentos();
   }, []);
 
-  if (loading) return <div style={{ padding: '20px' }}>Carregando painel do administrador...</div>;
+  if (loading) return <div style={{ padding: '20px', color: '#fff' }}>Carregando painel do administrador...</div>;
   if (error) return <div style={{ padding: '20px', color: 'red' }}>{error}</div>;
 
-  // PROTEÇÃO 2: Se a variável não existir ou o tamanho for zero, exibe a mensagem de segurança imediatamente
-  if (!agendamentos || agendamentos.length === 0) {
-    return (
-      <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
-        <h2>Painel de Agendamentos do Barbeiro</h2>
-        <div style={{ marginTop: '30px', padding: '20px', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #eee' }}>
-          <p style={{ fontSize: '18px', color: '#666' }}>📅 Nenhum agendamento encontrado no momento.</p>
-          <p style={{ fontSize: '14px', color: '#999' }}>Os novos horários marcados pelos clientes aparecerão nesta tela automaticamente.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // PROTEÇÃO 3: O bloco abaixo só roda se houver obrigatoriamente itens na array
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }}>
       <h2>Painel de Agendamentos do Barbeiro</h2>
       
-      <div style={{ overflowX: 'auto', marginTop: '20px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #ddd', background: '#f5f5f5' }}>
-              <th style={{ padding: '12px' }}>Cliente</th>
-              <th style={{ padding: '12px' }}>Serviço</th>
-              <th style={{ padding: '12px' }}>Data</th>
-              <th style={{ padding: '12px' }}>Horário</th>
-            </tr>
-          </thead>
-          <tbody>
-            {agendamentos.map((item, index) => (
-              <tr key={`admin-item-${item?.id || index}-${index}`} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '12px' }}>{item?.cliente || 'Não informado'}</td>
-                <td style={{ padding: '12px' }}>{item?.servico || 'Não informado'}</td>
-                <td style={{ padding: '12px' }}>{item?.data || '---'}</td>
-                <td style={{ padding: '12px' }}>{item?.hora || '---'}</td>
+      {/* Se a lista estiver vazia, mostra o aviso, mas NÃO esconde o resto do painel */}
+      {!agendamentos || agendamentos.length === 0 ? (
+        <div style={{ marginTop: '30px', padding: '20px', background: '#1e1e24', borderRadius: '8px', border: '1px solid #333', textAlign: 'center' }}>
+          <p style={{ fontSize: '18px', color: '#ccc' }}>📅 Nenhum agendamento encontrado no momento.</p>
+          <p style={{ fontSize: '14px', color: '#777' }}>Os novos horários marcados pelos clientes aparecerão nesta tela automaticamente.</p>
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto', marginTop: '20px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: '#1e1e24' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #333', background: '#2a2a32' }}>
+                <th style={{ padding: '12px' }}>Cliente</th>
+                <th style={{ padding: '12px' }}>Serviço</th>
+                <th style={{ padding: '12px' }}>Data</th>
+                <th style={{ padding: '12px' }}>Horário</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={4} style={{ textAlign: 'center', padding: '15px', color: '#888', fontSize: '13px' }}>
-                Filtro de duplicadas ativo • Proteção de tela branca ativa
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {agendamentos.map((item, index) => (
+                <tr key={`admin-item-${item?.id || index}-${index}`} style={{ borderBottom: '1px solid #333' }}>
+                  <td style={{ padding: '12px' }}>{item?.cliente || 'Não informado'}</td>
+                  <td style={{ padding: '12px' }}>{item?.servico || 'Não informado'}</td>
+                  <td style={{ padding: '12px' }}>{item?.data || '---'}</td>
+                  <td style={{ padding: '12px' }}>{item?.hora || '---'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
 
-// Exportação secundária por segurança caso outra parte do app precise
 export default BarberAdminDashboard;
