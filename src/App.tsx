@@ -3,6 +3,7 @@ import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { BarberAdminDashboard } from './components/BarberAdminDashboard';
 import { BarberClientApp } from './components/BarberClientApp';
 import { OtpVerificationCard, AccessRole } from './components/OtpVerificationCard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Tenant } from './types';
 
 export default function App() {
@@ -130,45 +131,47 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-gray-950 text-gray-100 font-sans antialiased">
-      {currentView === 'superadmin' && (
-        <SuperAdminDashboard
-          onLogout={handleLogout}
-          onOpenBarberWithPassword={handleOpenBarberWithPassword}
-        />
-      )}
-
-      {currentView === 'barbearia' && (
-        <BarberAdminDashboard
-          key={activeBarberTenant.subdomain}
-          tenantName={activeBarberTenant.name}
-          tenantSubdomain={activeBarberTenant.subdomain}
-          tempPasswordUsed={activeBarberTenant.tempPasswordUsed}
-          onLogout={handleLogout}
-          onSwitchToSuperAdmin={() => setCurrentView('superadmin')}
-          onSwitchToClientApp={() => setCurrentView('cliente')}
-        />
-      )}
-
-      {currentView === 'cliente' && (
-        <BarberClientApp
-          key={activeBarberTenant.subdomain}
-          tenantName={activeBarberTenant.name}
-          tenantSubdomain={activeBarberTenant.subdomain}
-          initialScreen={clientScreenMode}
-          initialAuthMode={clientScreenMode === 'auth' ? 'register' : 'register'}
-          onLogout={handleLogout}
-        />
-      )}
-
-      {currentView === 'auth' && (
-        <main className="min-h-screen w-full flex items-center justify-center p-4">
-          <OtpVerificationCard
-            initialRole={activeRole}
-            onSuccess={handleAuthSuccess}
-            onDirectRegister={handleDirectRegister}
+      <ErrorBoundary fallbackTitle="Painel Principal">
+        {currentView === 'superadmin' && (
+          <SuperAdminDashboard
+            onLogout={handleLogout}
+            onOpenBarberWithPassword={handleOpenBarberWithPassword}
           />
-        </main>
-      )}
+        )}
+
+        {currentView === 'barbearia' && (
+          <BarberAdminDashboard
+            key={activeBarberTenant.subdomain}
+            tenantName={activeBarberTenant.name}
+            tenantSubdomain={activeBarberTenant.subdomain}
+            tempPasswordUsed={activeBarberTenant.tempPasswordUsed}
+            onLogout={handleLogout}
+            onSwitchToSuperAdmin={() => setCurrentView('superadmin')}
+            onSwitchToClientApp={() => setCurrentView('cliente')}
+          />
+        )}
+
+        {currentView === 'cliente' && (
+          <BarberClientApp
+            key={activeBarberTenant.subdomain}
+            tenantName={activeBarberTenant.name}
+            tenantSubdomain={activeBarberTenant.subdomain}
+            initialScreen={clientScreenMode}
+            initialAuthMode={clientScreenMode === 'auth' ? 'register' : 'register'}
+            onLogout={handleLogout}
+          />
+        )}
+
+        {currentView === 'auth' && (
+          <main className="min-h-screen w-full flex items-center justify-center p-4">
+            <OtpVerificationCard
+              initialRole={activeRole}
+              onSuccess={handleAuthSuccess}
+              onDirectRegister={handleDirectRegister}
+            />
+          </main>
+        )}
+      </ErrorBoundary>
     </div>
   );
 }
