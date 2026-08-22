@@ -1282,3 +1282,5 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     </div>
   );
 };
+
+export default SuperAdminDashboard;
