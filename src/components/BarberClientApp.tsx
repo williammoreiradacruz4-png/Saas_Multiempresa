@@ -1404,3 +1404,5 @@ export const BarberClientApp: React.FC<BarberClientAppProps> = ({
     </div>
   );
 };
+
+export default BarberClientApp;
