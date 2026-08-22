@@ -805,8 +805,7 @@ export async function deleteTenantFromFirestore(tenantId: string): Promise<boole
 // ============================================================================
 
 /**
- * Salva agendamento na coleção 'appointments', na subcoleção da empresa no Firestore
- * e no armazenamento local sincronizado para tempo real imediato.
+ * Salva agendamento na subcoleção da empresa e na coleção global com ID único e sem duplicatas
  */
 export async function saveBookingToFirestore(
   tenantId: string,
@@ -814,7 +813,7 @@ export async function saveBookingToFirestore(
   clientDetails?: { id?: string; name?: string; phone?: string; email?: string }
 ): Promise<void> {
   try {
-    const bookingDocId = booking.id || `bk-${Date.now()}`;
+    const bookingDocId = String(booking.id || `bk-${Date.now()}`);
     const cleanTenantId = tenantId || 'navalha-ouro';
 
     const payload = {
@@ -838,27 +837,37 @@ export async function saveBookingToFirestore(
       updatedAt: new Date().toISOString(),
     };
 
-    // 1. Salva no localStorage para sincronia instantânea na mesma aba/outras abas
+    // 1. Salva no localStorage de forma estritamente deduplicada
     try {
-      const keysToSave = [
-        `tenant_appointments_${cleanTenantId}`,
-        'tenant_appointments_all',
-        'tenant_appointments_navalha-ouro',
-      ];
-      keysToSave.forEach((storageKey) => {
-        const existing = localStorage.getItem(storageKey);
-        let list: any[] = existing ? JSON.parse(existing) : [];
-        list = [payload, ...list.filter((item) => item.id !== bookingDocId)];
-        localStorage.setItem(storageKey, JSON.stringify(list));
-      });
+      const storageKey = `tenant_appointments_${cleanTenantId}`;
+      const existing = localStorage.getItem(storageKey);
+      let list: any[] = existing ? JSON.parse(existing) : [];
+      const map = new Map<string, any>();
+      map.set(bookingDocId, payload);
+      if (Array.isArray(list)) {
+        list.forEach((item) => {
+          if (item && item.id && item.id !== bookingDocId) {
+            map.set(item.id, item);
+          }
+        });
+      }
+      localStorage.setItem(storageKey, JSON.stringify(Array.from(map.values())));
 
-      // Salva também no histórico individual do cliente
+      // Salva também no histórico individual do cliente se aplicável
       if (payload.clientId) {
         const clientKey = `client_bookings_${payload.clientId}`;
         const clientExisting = localStorage.getItem(clientKey);
         let clientList: any[] = clientExisting ? JSON.parse(clientExisting) : [];
-        clientList = [payload, ...clientList.filter((item) => item.id !== bookingDocId)];
-        localStorage.setItem(clientKey, JSON.stringify(clientList));
+        const clientMap = new Map<string, any>();
+        clientMap.set(bookingDocId, payload);
+        if (Array.isArray(clientList)) {
+          clientList.forEach((item) => {
+            if (item && item.id && item.id !== bookingDocId) {
+              clientMap.set(item.id, item);
+            }
+          });
+        }
+        localStorage.setItem(clientKey, JSON.stringify(Array.from(clientMap.values())));
       }
 
       // Dispara evento global para o painel admin capturar instantaneamente
@@ -867,31 +876,24 @@ export async function saveBookingToFirestore(
           detail: payload,
         })
       );
-      window.dispatchEvent(new Event('storage'));
     } catch (lsErr) {
       console.warn('LocalStorage booking note:', lsErr);
     }
 
-    // 2. Coleção global de agendamentos no Firestore
-    try {
-      await setDoc(doc(db, 'appointments', bookingDocId), payload, { merge: true });
-    } catch (e1) {
-      console.warn('Erro ao gravar em appointments global:', e1);
-    }
-
-    // 3. Subcoleção da Barbearia no Firestore
+    // 2. Grava na subcoleção canônica da Barbearia no Firestore
     try {
       await setDoc(doc(db, `tenants/${cleanTenantId}/appointments`, bookingDocId), payload, {
         merge: true,
       });
-      // Se não for a padrão, grava também na navalha-ouro como backup de segurança
-      if (cleanTenantId !== 'navalha-ouro') {
-        await setDoc(doc(db, `tenants/navalha-ouro/appointments`, bookingDocId), payload, {
-          merge: true,
-        });
-      }
+    } catch (e1) {
+      console.warn(`Erro ao gravar em tenants/${cleanTenantId}/appointments:`, e1);
+    }
+
+    // 3. Grava na coleção raiz global com o mesmo ID exato
+    try {
+      await setDoc(doc(db, 'appointments', bookingDocId), payload, { merge: true });
     } catch (e2) {
-      console.warn(`Erro ao gravar em tenants/${cleanTenantId}/appointments:`, e2);
+      console.warn('Erro ao gravar em appointments global:', e2);
     }
   } catch (error) {
     console.warn('Erro geral ao salvar agendamento no Firestore:', error);
@@ -899,28 +901,36 @@ export async function saveBookingToFirestore(
 }
 
 /**
- * Busca agendamentos de uma barbearia no Firestore e no cache local
+ * Busca agendamentos de uma barbearia no Firestore e no cache local com deduplicação estrita
  */
 export async function getAppointmentsFromFirestore(tenantId: string): Promise<any[]> {
   const cleanTenantId = tenantId || 'navalha-ouro';
   const listMap = new Map<string, any>();
+  const seenSignatures = new Set<string>();
 
-  // 1. Carrega do cache local primeiro (múltiplas chaves para máxima segurança)
+  const addUniqueItem = (item: any, fallbackId?: string) => {
+    if (!item) return;
+    const safeId = String(item.id || fallbackId || '').trim();
+    const cName = String(item.clientName || item.name || '').trim().toLowerCase();
+    const sName = String(item.serviceName || '').trim().toLowerCase();
+    const dTime = String(item.date || item.formattedDate || item.dateTime || '').trim();
+    const time = String(item.time || '').trim();
+    const signature = `${cName}_${sName}_${dTime}_${time}`;
+
+    if (safeId && listMap.has(safeId)) return;
+    if (signature.length > 5 && seenSignatures.has(signature)) return;
+
+    if (safeId) listMap.set(safeId, { ...item, id: safeId });
+    if (signature.length > 5) seenSignatures.add(signature);
+  };
+
+  // 1. Carrega do cache local
   try {
-    const keysToCheck = [
-      `tenant_appointments_${cleanTenantId}`,
-      'tenant_appointments_all',
-      'tenant_appointments_navalha-ouro',
-    ];
-    for (const key of keysToCheck) {
-      const cached = localStorage.getItem(key);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((item) => {
-            if (item && item.id) listMap.set(item.id, item);
-          });
-        }
+    const cached = localStorage.getItem(`tenant_appointments_${cleanTenantId}`);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item) => addUniqueItem(item, item?.id));
       }
     }
   } catch {}
@@ -930,34 +940,30 @@ export async function getAppointmentsFromFirestore(tenantId: string): Promise<an
     const querySnapshot = await getDocs(collection(db, `tenants/${cleanTenantId}/appointments`));
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      listMap.set(docSnap.id, { id: docSnap.id, ...data });
+      addUniqueItem({ id: docSnap.id, ...data }, docSnap.id);
     });
   } catch (error) {
     console.warn('Erro ao ler appointments do tenant:', error);
   }
 
-  // 3. Se cleanTenantId não for navalha-ouro, busca também na navalha-ouro para redundância
-  if (cleanTenantId !== 'navalha-ouro') {
+  // 3. Busca na coleção raiz de appointments com filtro de tenant
+  try {
+    const globalQuery = query(collection(db, 'appointments'), where('tenantId', '==', cleanTenantId));
+    const globalSnap = await getDocs(globalQuery);
+    globalSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      addUniqueItem({ id: docSnap.id, ...data }, docSnap.id);
+    });
+  } catch (error) {
     try {
-      const fallbackSnap = await getDocs(collection(db, 'tenants/navalha-ouro/appointments'));
-      fallbackSnap.forEach((docSnap) => {
-        const data = docSnap.data();
+      const globalSnap = await getDocs(collection(db, 'appointments'));
+      globalSnap.forEach((docSnap) => {
+        const data = docSnap.data() as any;
         if (data.tenantId === cleanTenantId || !data.tenantId) {
-          listMap.set(docSnap.id, { id: docSnap.id, ...data });
+          addUniqueItem({ id: docSnap.id, ...data }, docSnap.id);
         }
       });
     } catch {}
-  }
-
-  // 4. Busca na coleção raiz de appointments
-  try {
-    const globalSnap = await getDocs(collection(db, 'appointments'));
-    globalSnap.forEach((docSnap) => {
-      const data = docSnap.data();
-      listMap.set(docSnap.id, { id: docSnap.id, ...data });
-    });
-  } catch (error) {
-    console.warn('Erro ao ler appointments globais:', error);
   }
 
   const result = Array.from(listMap.values()).map((a) => ({
@@ -987,7 +993,7 @@ export async function getAppointmentsFromFirestore(tenantId: string): Promise<an
 }
 
 /**
- * Busca agendamentos específicos de um cliente
+ * Busca agendamentos específicos de um cliente com deduplicação
  */
 export async function getClientBookingsFromFirestore(
   clientId: string,
@@ -1000,8 +1006,24 @@ export async function getClientBookingsFromFirestore(
   }
 
   const listMap = new Map<string, ClientBooking>();
+  const seenSignatures = new Set<string>();
   const cleanEmail = (clientEmail || '').trim().toLowerCase();
   const cleanPhone = (clientPhone || '').replace(/\D/g, '');
+
+  const addUniqueBooking = (data: any, fallbackId?: string) => {
+    if (!data) return;
+    const safeId = String(data.id || fallbackId || '').trim();
+    const sName = String(data.serviceName || '').trim().toLowerCase();
+    const dTime = String(data.date || data.formattedDate || '').trim();
+    const time = String(data.time || '').trim();
+    const signature = `${sName}_${dTime}_${time}`;
+
+    if (safeId && listMap.has(safeId)) return;
+    if (signature.length > 3 && seenSignatures.has(signature)) return;
+
+    if (safeId) listMap.set(safeId, { ...data, id: safeId } as ClientBooking);
+    if (signature.length > 3) seenSignatures.add(signature);
+  };
 
   // 1. LocalStorage do cliente
   if (clientId) {
@@ -1010,9 +1032,7 @@ export async function getClientBookingsFromFirestore(
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) {
-          parsed.forEach((item) => {
-            if (item && item.id) listMap.set(item.id, item);
-          });
+          parsed.forEach((item) => addUniqueBooking(item, item?.id));
         }
       }
     } catch {}
@@ -1042,7 +1062,7 @@ export async function getClientBookingsFromFirestore(
     tenantSnap.forEach((docSnap) => {
       const data = docSnap.data() as any;
       if (isMatch(data)) {
-        listMap.set(docSnap.id, { id: docSnap.id, ...data } as ClientBooking);
+        addUniqueBooking({ id: docSnap.id, ...data }, docSnap.id);
       }
     });
   } catch (error) {
@@ -1055,7 +1075,7 @@ export async function getClientBookingsFromFirestore(
     globalSnap.forEach((docSnap) => {
       const data = docSnap.data() as any;
       if (isMatch(data)) {
-        listMap.set(docSnap.id, { id: docSnap.id, ...data } as ClientBooking);
+        addUniqueBooking({ id: docSnap.id, ...data }, docSnap.id);
       }
     });
   } catch {}
@@ -1072,48 +1092,37 @@ export function subscribeToTenantAppointments(
 ): () => void {
   const cleanTenantId = tenantId || 'navalha-ouro';
 
-  const unsubs: (() => void)[] = [];
-
   try {
-    // Escuta na subcoleção do tenant
-    const unsub1 = onSnapshot(
+    // Escuta na subcoleção específica do tenant com deduplicação
+    const unsub = onSnapshot(
       collection(db, `tenants/${cleanTenantId}/appointments`),
       (snapshot) => {
-        const list: any[] = [];
+        const listMap = new Map<string, any>();
+        const seenSignatures = new Set<string>();
+
         snapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() });
+          const data = docSnap.data();
+          const safeId = docSnap.id;
+          const cName = String(data?.clientName || data?.name || '').trim().toLowerCase();
+          const sName = String(data?.serviceName || '').trim().toLowerCase();
+          const dTime = String(data?.date || data?.formattedDate || data?.dateTime || '').trim();
+          const time = String(data?.time || '').trim();
+          const signature = `${cName}_${sName}_${dTime}_${time}`;
+
+          if (!listMap.has(safeId) && (!signature || !seenSignatures.has(signature))) {
+            listMap.set(safeId, { id: safeId, ...data });
+            if (signature) seenSignatures.add(signature);
+          }
         });
-        if (list.length > 0) {
-          onUpdate(list);
-        }
+
+        onUpdate(Array.from(listMap.values()));
       },
       (error) => {
         console.warn('Listener onSnapshot tenant appointments note:', error);
       }
     );
-    unsubs.push(unsub1);
 
-    // Escuta também na coleção global
-    const unsub2 = onSnapshot(
-      collection(db, 'appointments'),
-      (snapshot) => {
-        const list: any[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        if (list.length > 0) {
-          onUpdate(list);
-        }
-      },
-      (error) => {
-        console.warn('Listener onSnapshot global appointments note:', error);
-      }
-    );
-    unsubs.push(unsub2);
-
-    return () => {
-      unsubs.forEach((fn) => fn());
-    };
+    return () => unsub();
   } catch (err) {
     console.warn('Falha ao iniciar onSnapshot:', err);
     return () => {};
